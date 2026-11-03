@@ -1,0 +1,142 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6fa;
+    color: #333;
+    display: flex;
+}
+
+.sidebar {
+    width: 230px;
+    min-height: 100vh;
+    background: #ac0000;
+    color: white;
+    padding: 30px 20px;
+    position: fixed;
+}
+
+.sidebar h2 {
+    margin-bottom: 40px;
+}
+
+.sidebar a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 14px 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+}
+
+.sidebar a:hover {
+    background: #600;
+}
+
+main {
+    margin-left: 230px;
+    padding: 40px;
+    width: calc(100% - 230px);
+}
+
+section {
+    margin-bottom: 45px;
+    scroll-margin-top: 25px;
+}
+
+h1, h2 {
+    margin-bottom: 25px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #00000010;
+}
+
+.card p {
+    font-size: 30px;
+    font-weight: bold;
+    margin-top: 15px;
+    color: #dea801;
+}
+
+form {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 600px;
+}
+
+label {
+    display: block;
+    margin: 15px 0 7px;
+    font-weight: bold;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+button {
+    margin-top: 20px;
+    padding: 13px 22px;
+    background: #5c7a00;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #3d5100;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #3a2b19;
+    color: white;
+}
+
+@media (max-width: 800px) {
+    .sidebar {
+        width: 180px;
+    }
+
+    main {
+        margin-left: 180px;
+        width: calc(100% - 180px);
+        padding: 20px;
+    }
+
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
