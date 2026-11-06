@@ -1,0 +1,450 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6fa;
+    color: #333;
+    display: flex;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+    width: 250px;
+    min-height: 100vh;
+    background: #ac0000;
+    color: white;
+    padding: 30px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.brand {
+    text-align: center;
+}
+
+.brand h2 {
+    font-size: 21px;
+    margin-bottom: 5px;
+}
+
+.brand span {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #f2d58a;
+}
+
+.hotel-logo {
+    display: block;
+    width: 155px;
+    height: auto;
+    margin: 20px auto 30px;
+    object-fit: contain;
+}
+
+.sidebar nav a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 14px 15px;
+    margin-bottom: 7px;
+    border-radius: 7px;
+    transition: 0.2s;
+}
+
+.sidebar nav a:hover {
+    background: #600;
+    padding-left: 20px;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 30px;
+    text-align: center;
+    font-size: 11px;
+    color: #f2d5d5;
+}
+
+/* CONTEÚDO */
+
+main {
+    margin-left: 250px;
+    padding: 40px;
+    width: calc(100% - 250px);
+    max-width: 1600px;
+}
+
+.page-header {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+    border-left: 5px solid #ac0000;
+    box-shadow: 0 3px 12px #00000008;
+}
+
+.page-header h1 {
+    font-size: 27px;
+    margin: 8px 0;
+    color: #3a2b19;
+}
+
+.page-header p,
+.section-heading p {
+    color: #777;
+    font-size: 14px;
+}
+
+.eyebrow {
+    color: #ac0000;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+section {
+    margin-bottom: 50px;
+    scroll-margin-top: 25px;
+}
+
+.section-heading {
+    margin-bottom: 22px;
+}
+
+.section-heading h2 {
+    font-size: 23px;
+    color: #3a2b19;
+    margin: 7px 0;
+}
+
+/* DASHBOARD */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    border-bottom: 3px solid #dea801;
+    box-shadow: 0 3px 12px #00000008;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+.card-label {
+    color: #777;
+    font-size: 14px;
+}
+
+.card p {
+    font-size: 32px;
+    font-weight: bold;
+    margin-top: 12px;
+    color: #ac0000;
+}
+
+/* FORMULÁRIO */
+
+form {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 750px;
+    box-shadow: 0 3px 12px #00000008;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.form-group {
+    min-width: 0;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 13px;
+    color: #3a2b19;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    background: #fff;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+select:focus {
+    border-color: #ac0000;
+    box-shadow: 0 0 0 3px #ac000015;
+}
+
+/* AVISO DE ERRO */
+
+.alert-error {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #fff0f0;
+    border: 1px solid #e6aaaa;
+    border-left: 5px solid #c40000;
+    color: #b00000;
+    padding: 15px 18px;
+    border-radius: 7px;
+    margin-bottom: 22px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.alert-error strong {
+    font-size: 14px;
+}
+
+/* BOTÃO */
+
+.btn-primary {
+    margin-top: 25px;
+    padding: 14px 24px;
+    background: #ac0000;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.btn-primary:hover {
+    background: #780000;
+    transform: translateY(-1px);
+}
+
+/* TABELAS */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px #00000008;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+}
+
+th,
+td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+th {
+    background: #3a2b19;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+td {
+    color: #555;
+}
+
+tbody tr:hover {
+    background: #fffaf0;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    padding: 30px;
+}
+
+/* STATUS DAS RESERVAS */
+
+.status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+/* PENDENTE - AMARELO */
+
+.status-pendente {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* CONFIRMADA - VERDE */
+
+.status-confirmada {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* CONCLUÍDA - AZUL */
+
+.status-concluida {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+/* OUTROS STATUS */
+
+.status-cancelada,
+.status-cancelado {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* RODAPÉ */
+
+footer {
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+    padding: 25px 0;
+    border-top: 1px solid #e5e5e5;
+}
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 1100px) {
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 800px) {
+    .sidebar {
+        width: 190px;
+        padding: 25px 12px;
+    }
+
+    .hotel-logo {
+        width: 125px;
+    }
+
+    main {
+        margin-left: 190px;
+        width: calc(100% - 190px);
+        padding: 25px;
+    }
+
+    .page-header h1 {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        display: block;
+    }
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+        min-height: auto;
+        padding: 18px;
+    }
+
+    .hotel-logo {
+        width: 100px;
+        margin: 12px auto;
+    }
+
+    .sidebar nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .sidebar nav a {
+        padding: 10px;
+        margin: 0;
+        font-size: 12px;
+    }
+
+    .sidebar-footer {
+        display: none;
+    }
+
+    main {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .card p {
+        font-size: 25px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group.full {
+        grid-column: auto;
+    }
+
+    form {
+        padding: 20px;
+    }
+}
