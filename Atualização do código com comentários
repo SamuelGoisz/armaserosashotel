@@ -1,0 +1,560 @@
+
+<?php
+require_once 'config.php';
+
+$mensagemErro = '';
+
+$idHospede = '';
+$idQuarto = '';
+$checkin = '';
+$checkout = '';
+$quantidade = '';
+
+$hoteis = $pdo->query("
+    SELECT * FROM hotel ORDER BY id_hotel
+")->fetchAll();
+
+$quartos = $pdo->query("
+    SELECT
+        q.*,
+        t.nome AS tipo_quarto,
+        t.preco_diaria,
+        t.capacidade
+    FROM quarto q
+    JOIN tipo_quarto t
+        ON q.id_tipo_quarto = t.id_tipo_quarto
+    ORDER BY q.numero
+")->fetchAll();
+
+$hospedes = $pdo->query("
+    SELECT * FROM hospede ORDER BY nome
+")->fetchAll();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $idHospede = $_POST['id_hospede'] ?? '';
+    $idQuarto = $_POST['id_quarto'] ?? '';
+    $checkin = $_POST['checkin'] ?? '';
+    $checkout = $_POST['checkout'] ?? '';
+    $quantidade = $_POST['quantidade_hospedes'] ?? '';
+
+    $quantidadeInt = filter_var($quantidade, FILTER_VALIDATE_INT);
+
+    // Validação das datas
+    if (
+        !$checkin ||
+        !$checkout ||
+        strtotime($checkout) <= strtotime($checkin)
+    ) {
+        $mensagemErro = 'A data do check-out deve ser posterior à data do check-in.';
+    }
+
+    // Validação da quantidade de hóspedes
+    elseif (!$quantidadeInt || $quantidadeInt < 1) {
+        $mensagemErro = 'Informe uma quantidade válida de hóspedes.';
+    }
+
+    else {
+        $dias = (strtotime($checkout) - strtotime($checkin)) / 86400;
+
+        $stmt = $pdo->prepare("
+            SELECT
+                q.id_quarto,
+                t.preco_diaria,
+                t.capacidade
+            FROM quarto q
+            JOIN tipo_quarto t
+                ON q.id_tipo_quarto = t.id_tipo_quarto
+            WHERE q.id_quarto = ?
+        ");
+
+        $stmt->execute([$idQuarto]);
+        $quarto = $stmt->fetch();
+
+        if (!$quarto) {
+            $mensagemErro = 'Quarto inválido. Selecione um quarto disponível.';
+        }
+
+        elseif ($quantidadeInt > $quarto['capacidade']) {
+            $mensagemErro = 'Capacidade excedida! Este quarto comporta no máximo '
+                . $quarto['capacidade'] . ' hóspede(s).';
+        }
+
+        else {
+            // Verifica conflitos de reservas
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM reserva r
+                JOIN reserva_quarto rq
+                    ON r.id_reserva = rq.id_reserva
+                WHERE rq.id_quarto = ?
+                AND r.status IN ('pendente', 'confirmada')
+                AND r.checkin_previsto < ?
+                AND r.checkout_previsto > ?
+            ");
+
+            $stmt->execute([
+                $idQuarto,
+                $checkout,
+                $checkin
+            ]);
+
+            if ($stmt->fetchColumn() > 0) {
+                $mensagemErro = 'Quarto indisponível para o período selecionado.';
+            }
+
+            else {
+                $valorTotal = $quarto['preco_diaria'] * $dias;
+
+                try {
+                    $pdo->beginTransaction();
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO reserva (
+                            id_hospede,
+                            data_reserva,
+                            checkin_previsto,
+                            checkout_previsto,
+                            quantidade_hospedes,
+                            status,
+                            valor_total
+                        )
+                        VALUES (?, CURRENT_DATE, ?, ?, ?, 'pendente', ?)
+                        RETURNING id_reserva
+                    ");
+
+                    $stmt->execute([
+                        $idHospede,
+                        $checkin,
+                        $checkout,
+                        $quantidadeInt,
+                        $valorTotal
+                    ]);
+
+                    $idReserva = $stmt->fetchColumn();
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO reserva_quarto (
+                            id_reserva,
+                            id_quarto,
+                            valor_diaria,
+                            quantidade_diarias,
+                            valor_total
+                        )
+                        VALUES (?, ?, ?, ?, ?)
+                    ");
+
+                    $stmt->execute([
+                        $idReserva,
+                        $idQuarto,
+                        $quarto['preco_diaria'],
+                        $dias,
+                        $valorTotal
+                    ]);
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO historico_reserva (
+                            id_reserva,
+                            status_anterior,
+                            status_novo,
+                            observacao
+                        )
+                        VALUES (?, NULL, 'pendente', 'Reserva criada')
+                    ");
+
+                    $stmt->execute([$idReserva]);
+
+                    $pdo->commit();
+
+                    header("Location: index.php#reservas");
+                    exit;
+
+                } catch (Exception $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+
+                    $mensagemErro = 'Não foi possível criar a reserva. Verifique os dados e tente novamente.';
+                }
+            }
+        }
+    }
+}
+
+// Consultas para exibição
+$reservas = $pdo->query("
+    SELECT
+        r.*,
+        h.nome AS hospede
+    FROM reserva r
+    JOIN hospede h
+        ON r.id_hospede = h.id_hospede
+    ORDER BY r.data_reserva DESC
+")->fetchAll();
+
+$totalHoteis = $pdo->query("SELECT COUNT(*) FROM hotel")->fetchColumn();
+$totalQuartos = $pdo->query("SELECT COUNT(*) FROM quarto")->fetchColumn();
+$totalHospedes = $pdo->query("SELECT COUNT(*) FROM hospede")->fetchColumn();
+$totalReservas = $pdo->query("SELECT COUNT(*) FROM reserva")->fetchColumn();
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Armas & Rosas Hotel</title>
+
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+
+<body>
+
+<aside class="sidebar">
+
+    <div class="brand">
+        <h2>Armas & Rosas</h2>
+        <span>GRAND HOTEL</span>
+    </div>
+
+    <img
+        class="hotel-logo"
+        src="assets/serj-tankian.webp"
+        alt="Armas & Rosas Hotel"
+    >
+
+    <nav>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#nova-reserva">Nova Reserva</a>
+        <a href="#reservas">Reservas</a>
+        <a href="#quartos">Quartos</a>
+        <a href="#hospedes">Hóspedes</a>
+    </nav>
+
+    <div class="sidebar-footer">
+        Sistema de Gerenciamento
+    </div>
+
+</aside>
+
+<main>
+
+    <header class="page-header">
+        <div>
+            <span class="eyebrow">PAINEL ADMINISTRATIVO</span>
+            <h1>Bem-vindo ao Armas & Rosas</h1>
+            <p>Gerencie suas reservas, quartos e hóspedes.</p>
+        </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">VISÃO GERAL</span>
+                <h2>Dashboard</h2>
+            </div>
+        </div>
+
+        <div class="cards">
+
+            <div class="card">
+                <span class="card-label">Hotéis</span>
+                <p><?= $totalHoteis ?></p>
+            </div>
+
+            <div class="card">
+                <span class="card-label">Quartos</span>
+                <p><?= $totalQuartos ?></p>
+            </div>
+
+            <div class="card">
+                <span class="card-label">Hóspedes</span>
+                <p><?= $totalHospedes ?></p>
+            </div>
+
+            <div class="card">
+                <span class="card-label">Reservas</span>
+                <p><?= $totalReservas ?></p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- NOVA RESERVA -->
+    <section id="nova-reserva">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">HOSPEDAGEM</span>
+                <h2>Nova Reserva</h2>
+                <p>Preencha os dados para cadastrar uma hospedagem.</p>
+            </div>
+        </div>
+
+        <form method="POST" action="index.php#nova-reserva">
+
+            <?php if ($mensagemErro): ?>
+                <div class="alert-error" role="alert">
+                    <strong>Não foi possível realizar a reserva.</strong>
+                    <span><?= htmlspecialchars($mensagemErro) ?></span>
+                </div>
+            <?php endif; ?>
+
+            <div class="form-grid">
+
+                <div class="form-group full">
+                    <label for="id_hospede">Hóspede</label>
+
+                    <select name="id_hospede" id="id_hospede" required>
+                        <option value="">Selecione um hóspede</option>
+
+                        <?php foreach ($hospedes as $hospede): ?>
+                            <option
+                                value="<?= $hospede['id_hospede'] ?>"
+                                <?= $idHospede == $hospede['id_hospede'] ? 'selected' : '' ?>
+                            >
+                                <?= htmlspecialchars($hospede['nome']) ?>
+                            </option>
+                        <?php endforeach; ?>
+
+                    </select>
+                </div>
+
+                <div class="form-group full">
+                    <label for="id_quarto">Quarto</label>
+
+                    <select name="id_quarto" id="id_quarto" required>
+                        <option value="">Selecione um quarto</option>
+
+                        <?php foreach ($quartos as $quarto): ?>
+                            <option
+                                value="<?= $quarto['id_quarto'] ?>"
+                                <?= $idQuarto == $quarto['id_quarto'] ? 'selected' : '' ?>
+                            >
+                                Quarto <?= htmlspecialchars($quarto['numero']) ?>
+                                - <?= htmlspecialchars($quarto['tipo_quarto']) ?>
+                                (Até <?= $quarto['capacidade'] ?> hóspedes)
+                            </option>
+                        <?php endforeach; ?>
+
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkin">Check-in</label>
+                    <input
+                        type="date"
+                        name="checkin"
+                        id="checkin"
+                        value="<?= htmlspecialchars($checkin) ?>"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="checkout">Check-out</label>
+                    <input
+                        type="date"
+                        name="checkout"
+                        id="checkout"
+                        value="<?= htmlspecialchars($checkout) ?>"
+                        required
+                    >
+                </div>
+
+                <div class="form-group full">
+                    <label for="quantidade_hospedes">
+                        Quantidade de hóspedes
+                    </label>
+
+                    <input
+                        type="number"
+                        name="quantidade_hospedes"
+                        id="quantidade_hospedes"
+                        min="1"
+                        value="<?= htmlspecialchars($quantidade) ?>"
+                        placeholder="Ex.: 2"
+                        required
+                    >
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn-primary">
+                Cadastrar Reserva
+            </button>
+
+        </form>
+
+    </section>
+
+    <!-- RESERVAS -->
+    <section id="reservas">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">GERENCIAMENTO</span>
+                <h2>Reservas</h2>
+                <p>Consulte as reservas cadastradas no sistema.</p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Hóspede</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Status</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <?php if (count($reservas) > 0): ?>
+                        <?php foreach ($reservas as $reserva): ?>
+                            <?php
+                                $statusClasse = strtolower(trim($reserva['status']));
+                                $statusClasse = iconv('UTF-8', 'ASCII//TRANSLIT', $statusClasse);
+                                $statusClasse = preg_replace('/[^a-z0-9-]/', '', $statusClasse);
+                            ?>
+                            <tr>
+                                <td>#<?= $reserva['id_reserva'] ?></td>
+                                <td><?= htmlspecialchars($reserva['hospede']) ?></td>
+                                <td><?= htmlspecialchars($reserva['checkin_previsto']) ?></td>
+                                <td><?= htmlspecialchars($reserva['checkout_previsto']) ?></td>
+                                <td>
+                                    <span class="status status-<?= htmlspecialchars($statusClasse) ?>">
+                                        <?= htmlspecialchars($reserva['status']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    R$ <?= number_format($reserva['valor_total'], 2, ',', '.') ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                Nenhuma reserva cadastrada.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+    <!-- QUARTOS -->
+    <section id="quartos">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">ACOMODAÇÕES</span>
+                <h2>Quartos</h2>
+                <p>Consulte os quartos e suas respectivas capacidades.</p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Número</th>
+                        <th>Tipo</th>
+                        <th>Andar</th>
+                        <th>Capacidade</th>
+                        <th>Status</th>
+                        <th>Diária</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <?php if (count($quartos) > 0): ?>
+                        <?php foreach ($quartos as $quarto): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($quarto['numero']) ?></td>
+                                <td><?= htmlspecialchars($quarto['tipo_quarto']) ?></td>
+                                <td><?= htmlspecialchars($quarto['andar']) ?></td>
+                                <td>
+                                    <?= htmlspecialchars($quarto['capacidade']) ?>
+                                    hóspedes
+                                </td>
+                                <td><?= htmlspecialchars($quarto['status']) ?></td>
+                                <td>
+                                    R$ <?= number_format($quarto['preco_diaria'], 2, ',', '.') ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                Nenhum quarto cadastrado.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+    <!-- HÓSPEDES -->
+    <section id="hospedes">
+
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">CADASTROS</span>
+                <h2>Hóspedes</h2>
+                <p>Consulte os hóspedes cadastrados no sistema.</p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>E-mail</th>
+                        <th>Telefone</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <?php if (count($hospedes) > 0): ?>
+                        <?php foreach ($hospedes as $hospede): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($hospede['nome']) ?></td>
+                                <td><?= htmlspecialchars($hospede['cpf']) ?></td>
+                                <td><?= htmlspecialchars($hospede['email']) ?></td>
+                                <td><?= htmlspecialchars($hospede['telefone']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                Nenhum hóspede cadastrado.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+    <footer>
+        Armas & Rosas Hotel — Sistema de Gerenciamento
+    </footer>
+
+</main>
+
+</body>
+</html>
